@@ -31,6 +31,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Define a schema for the like count
 const likeSchema = new mongoose.Schema({
+    postId:{type:String,required:true},
     count: { type: Number, default: 0 },
 });
 
@@ -38,8 +39,8 @@ const likeSchema = new mongoose.Schema({
 const Like = mongoose.model('Like', likeSchema);
 
 // Ensure there's a document to track the like count
-async function initializeLikeCount() {
-    const count = await Like.findOne();
+async function initializeLikeCount(postId) {
+    const count = await Like.findOne({postId});
     if (!count) {
         const newCount = new Like({ count: 0 });
         await newCount.save();
@@ -60,20 +61,20 @@ io.on('connection', (socket) => {
     console.log('A user connected');
 
     // Send the current like count to the newly connected user
-    socket.on('fetchLikes', async () => {
-        const count = await Like.findOne();
-        io.emit('updateLikes', count ? count.count : 0); // Broadcast to all clients
+    socket.on('fetchLikes', async (postId) => {
+        const count = await Like.findOne({postId});
+        socket.emit('updateLikes',postId,count ? count.count : 0); // Broadcast to all clients
     });
 
     // Handle like updates
-    socket.on('updateLike', async (increment) => {
-        const count = await Like.findOne();
+    socket.on('updateLike', async (postId,increment) => {
+        const count = await Like.findOne({postId});
         if (count) {
-            count.count += increment ? 1 : -1;
+            count.count += increment ? 1 : 1;
             await count.save();
 
             // Broadcast the updated like count to all connected users
-            io.emit('updateLikes', count.count);
+            io.emit('updateLikes',postId, count.count);
         }
     });
 
