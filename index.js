@@ -70,7 +70,7 @@ io.on('connection', (socket) => {
     socket.on('updateLike', async (postId,increment) => {
         const count = await Like.findOne({postId});
         if (count) {
-            count.count += increment ? 1 : 1;
+            count.count += increment ? 1 : -1;
             await count.save();
 
             // Broadcast the updated like count to all connected users
